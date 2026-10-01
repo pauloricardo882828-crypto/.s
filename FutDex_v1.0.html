@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FutDex v1.0</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#0b0b0d;color:#fff}
+.wrap{max-width:520px;margin:auto;padding:22px}.card{background:#17171b;border:1px solid #2b2b31;border-radius:18px;padding:18px;margin:14px 0}
+h1{margin:8px 0 4px;font-size:30px}.sub{color:#aaa}.hidden{display:none}
+input,button{width:100%;padding:13px;border-radius:12px;border:1px solid #383840;background:#101014;color:#fff;font-size:16px;margin-top:10px}
+button{background:#fff;color:#111;font-weight:700;cursor:pointer}.danger{background:#3a1515;color:#fff}
+.stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}.stat b{display:block;font-size:25px;margin-top:4px}.label{color:#aaa;font-size:13px}
+.profile{padding:15px;border:1px solid #333;border-radius:14px;margin-top:10px;cursor:pointer}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+small{color:#aaa}.notice{color:#8cff9a;margin-top:10px;min-height:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section id="pin">
+    <h1>⚽ FutDex</h1><div class="sub">v1.0</div>
+    <div class="card"><h2>Acesso</h2><p>Digite o PIN do aplicativo.</p>
+    <input id="appPin" type="password" inputmode="numeric" placeholder="PIN">
+    <button onclick="enterApp()">Entrar</button><div id="pinMsg" class="notice"></div></div>
+  </section>
+
+  <section id="profiles" class="hidden">
+    <h1>Perfis</h1><div class="sub">Escolha seu perfil</div>
+    <div id="profileList"></div>
+    <div class="card"><h3>Novo perfil</h3>
+      <input id="newName" placeholder="Nome do perfil">
+      <input id="newPass" type="password" placeholder="Senha do perfil">
+      <button onclick="createProfile()">Criar perfil</button>
+    </div>
+  </section>
+
+  <section id="login" class="hidden">
+    <h1 id="loginTitle">Perfil</h1>
+    <div class="card"><input id="profilePass" type="password" placeholder="Senha do perfil">
+    <button onclick="loginProfile()">Entrar</button><div id="loginMsg" class="notice"></div></div>
+  </section>
+
+  <section id="dash" class="hidden">
+    <div class="row"><div><h1 id="dashTitle">FutDex</h1><div class="sub">Suas estatísticas</div></div><button style="width:auto" onclick="logout()">Sair</button></div>
+    <div id="stats"></div>
+    <button onclick="editStats()">✏️ Editar estatísticas</button>
+  </section>
+
+  <section id="edit" class="hidden">
+    <h1>Editar</h1><div class="sub">Altere os números e veja os cálculos.</div>
+    <div class="card">
+      <h3>⚽ Futebol</h3>
+      <input id="fg" type="number" min="0" placeholder="Jogos">
+      <input id="fgo" type="number" min="0" placeholder="Gols">
+      <input id="fa" type="number" min="0" placeholder="Assistências">
+    </div>
+    <div class="card">
+      <h3>🏟️ Jogos de rua</h3>
+      <input id="rg" type="number" min="0" placeholder="Jogos">
+      <input id="rgo" type="number" min="0" placeholder="Gols">
+      <input id="ra" type="number" min="0" placeholder="Assistências">
+    </div>
+    <div class="card"><h3>Prévia</h3><div id="preview"></div></div>
+    <button onclick="saveStats()">Salvar</button>
+    <button class="danger" onclick="show('dash')">Cancelar</button>
+    <div id="saveMsg" class="notice"></div>
+  </section>
+</div>
+<script>
+const KEY='futdex_profiles_v1', PIN='1298';
+let profiles=JSON.parse(localStorage.getItem(KEY)||'[]'), selected=-1;
+const $=id=>document.getElementById(id);
+function show(id){['pin','profiles','login','dash','edit'].forEach(x=>$(x).classList.toggle('hidden',x!==id));}
+function enterApp(){if($('appPin').value===PIN){renderProfiles();show('profiles')}else $('pinMsg').textContent='PIN incorreto.'}
+function renderProfiles(){let e=$('profileList');e.innerHTML=profiles.length?'':'<div class="card">Nenhum perfil criado ainda.</div>';profiles.forEach((p,i)=>{e.innerHTML+=`<div class="profile" onclick="selectProfile(${i})">👤 <b>${esc(p.name)}</b><br><small>Toque para entrar</small></div>`})}
+function selectProfile(i){selected=i;$('loginTitle').textContent=profiles[i].name;$('profilePass').value='';$('loginMsg').textContent='';show('login')}
+function loginProfile(){if(selected<0)return;if($('profilePass').value===profiles[selected].pass){show('dash');renderDash()}else $('loginMsg').textContent='Senha incorreta.'}
+function createProfile(){let n=$('newName').value.trim(),p=$('newPass').value;if(!n||!p)return alert('Preencha nome e senha.');profiles.push({name:n,pass:p,stats:{football:{g:0,go:0,a:0},street:{g:0,go:0,a:0}}});localStorage.setItem(KEY,JSON.stringify(profiles));$('newName').value='';$('newPass').value='';renderProfiles()}
+function rate(a,b){return b?((a/b).toFixed(2)):'0.00'}
+function block(title,s){let g=s.g,go=s.go,a=s.a;return `<div class="card"><h3>${title}</h3><div class="stat"><div><span class="label">Jogos</span><b>${g}</b></div><div><span class="label">Gols</span><b>${go}</b></div><div><span class="label">Assistências</span><b>${a}</b></div></div><hr style="border-color:#29292e;margin:16px 0"><div>⚽ Gols por jogo: <b>${rate(go,g)}</b></div><div>🎯 Assistências por jogo: <b>${rate(a,g)}</b></div><div>📊 G/A por jogo: <b>${rate(go+a,g)}</b></div></div>`}
+function renderDash(){let s=profiles[selected].stats;$('dashTitle').textContent=profiles[selected].name;$('stats').innerHTML=block('⚽ Futebol',s.football)+block('🏟️ Jogos de rua',s.street)}
+function editStats(){let s=profiles[selected].stats;[['fg',s.football.g],['fgo',s.football.go],['fa',s.football.a],['rg',s.street.g],['rgo',s.street.go],['ra',s.street.a]].forEach(x=>$(x[0]).value=x[1]);$('saveMsg').textContent='';updatePreview();show('edit')}
+['fg','fgo','fa','rg','rgo','ra'].forEach(id=>document.addEventListener('input',e=>{if(e.target.id===id)updatePreview()}));
+function vals(){return {football:{g:+$('fg').value||0,go:+$('fgo').value||0,a:+$('fa').value||0},street:{g:+$('rg').value||0,go:+$('rgo').value||0,a:+$('ra').value||0}}}
+function updatePreview(){let s=vals();$('preview').innerHTML=`Futebol — Gols/jogo ${rate(s.football.go,s.football.g)} · Assist./jogo ${rate(s.football.a,s.football.g)} · G/A ${rate(s.football.go+s.football.a,s.football.g)}<br><br>Rua — Gols/jogo ${rate(s.street.go,s.street.g)} · Assist./jogo ${rate(s.street.a,s.street.g)} · G/A ${rate(s.street.go+s.street.a,s.street.g)}`}
+function saveStats(){profiles[selected].stats=vals();localStorage.setItem(KEY,JSON.stringify(profiles));$('saveMsg').textContent='Estatísticas editadas!';setTimeout(()=>{renderDash();show('dash')},500)}
+function logout(){selected=-1;$('appPin').value='';show('pin')}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+</script>
+</body></html>
